@@ -1,14 +1,14 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 import json
+import os
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")  # Needed for session
 
-# Load access codes
 def load_codes():
     with open('codes.json') as f:
         return json.load(f)
 
-# Save updated codes
 def save_codes(codes):
     with open('codes.json', 'w') as f:
         json.dump(codes, f)
@@ -20,7 +20,9 @@ def index():
         codes = load_codes()
 
         if code in codes and codes[code] == "valid":
-            # Invalidate the code (one-time use)
+            # Store access in session
+            session['authenticated'] = True
+            session['code'] = code
             codes[code] = "used"
             save_codes(codes)
             return redirect('/gallery')
@@ -31,9 +33,9 @@ def index():
 
 @app.route('/gallery')
 def gallery():
-    return render_template('gallery.html')
-
-import os
+    if not session.get('authenticated'):
+        return redirect('/')
+    return redirect('https://landoffakes.pixieset.com')  # Or render_template if embedding
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
